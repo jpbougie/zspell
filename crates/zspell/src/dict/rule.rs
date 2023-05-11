@@ -7,7 +7,7 @@ use std::sync::Arc;
 use regex::Regex;
 
 use crate::affix::{ParsedCfg, RuleType};
-use crate::error::BuildError;
+use crate::error::{BuildError, ParseErrorKind};
 use crate::helpers::{compile_re_pattern, ReWrapper};
 use crate::morph::MorphInfo;
 use crate::parser_affix::ParsedRuleGroup;
@@ -51,7 +51,10 @@ impl AfxRule {
     /// NOTE: returns a vec reference and `Self`'s morph vec will be empty!
     /// Needs construction wherever the Arc target is
     // PERF: bench with & without vec reference instead of output
-    pub fn from_parsed_group(cfg: &ParsedCfg, group: &ParsedRuleGroup) -> Self {
+    pub fn from_parsed_group(
+        cfg: &ParsedCfg,
+        group: &ParsedRuleGroup,
+    ) -> Result<Self, ParseErrorKind> {
         let mut ret = Self {
             kind: group.kind,
             can_combine: group.can_combine,
@@ -65,15 +68,22 @@ impl AfxRule {
                 .map(|m| Arc::new(m.clone()))
                 .collect();
 
+            let continuations = if rule.continuations.is_empty() {
+                None
+            } else {
+                Some(cfg.flag_type().parse_str(&rule.continuations)?)
+            };
+
             ret.patterns.push(AfxRulePattern {
                 affix: rule.affix.clone(),
+                continuations,
                 condition: rule.condition.clone(),
                 strip: rule.strip.clone(),
                 morph_info,
             });
         }
 
-        ret
+        Ok(ret)
     }
 
     pub fn is_pfx(&self) -> bool {
@@ -105,6 +115,7 @@ impl AfxRule {
 #[derive(Clone, Default, Debug, PartialEq, Eq, Hash)]
 pub struct AfxRulePattern {
     affix: String,
+    continuations: Option<Vec<u32>>,
     /// Condition to be met to apply this rule.
     condition: Option<ReWrapper>,
     /// Characters to strip
@@ -119,6 +130,7 @@ impl AfxRulePattern {
     pub fn new(afx: &str, strip: Option<&str>) -> Self {
         Self {
             affix: afx.to_owned(),
+            continuations: None,
             condition: None,
             strip: strip.map(ToOwned::to_owned),
             morph_info: Vec::new(),
@@ -169,7 +181,9 @@ impl AfxRulePattern {
                 } else {
                     s.to_owned()
                 };
-                working.push_str(&self.affix);
+                if self.affix != "0" {
+                    working.push_str(&self.affix);
+                }
                 working.shrink_to_fit();
                 Some(working)
             }

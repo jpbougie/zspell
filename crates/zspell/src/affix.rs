@@ -352,7 +352,9 @@ impl ParsedCfg {
                 AffixNode::AfxLemmaPresentFlag(v) => {
                     warnings.push(format!("flag {name_str} is deprecated"));
                 }
-                AffixNode::AfxNeededFlag(v) => res.afx_needed_flag = Some(res.convert_flag(&v)?),
+                AffixNode::AfxNeededFlag(v) => {
+                    res.afx_needed_flag = { Some(res.convert_flag(&v)?) }
+                }
                 AffixNode::AfxPseudoRootFlag(v) => {
                     warnings.push(format!("flag {name_str} is deprecated"));
                 }
@@ -442,7 +444,8 @@ impl ParsedCfg {
                 .into());
             }
 
-            let rule = AfxRule::from_parsed_group(self, group);
+            let rule = AfxRule::from_parsed_group(self, group)
+                .map_err(|e| ParseError::new_nospan(e, &group.flag))?;
             map.insert(flag, FlagValue::Rule(Arc::new(rule)));
         }
 

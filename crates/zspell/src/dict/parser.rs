@@ -17,7 +17,7 @@ lazy_static! {
             (?P<flags>\S+)
         )?
         (?:\s+
-            (?P<morph>[\s\w:]+?)
+            (?P<morph>[\s\w:.\-'’]+?)
         )?
         (?:\s+\#.*)?$
     "

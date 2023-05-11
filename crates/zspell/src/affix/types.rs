@@ -86,7 +86,7 @@ impl FlagType {
             FlagType::Long => {
                 let mut ret = Vec::with_capacity(s.len() / 2);
                 let mut iter = s.chars();
-                for ch in s.chars() {
+                while let Some(ch) = iter.next() {
                     let ch_next = iter.next().ok_or(ParseErrorKind::FlagParse(self))?;
                     ret.push(Self::parse_chars_long([ch, ch_next])?);
                 }
@@ -202,6 +202,7 @@ pub enum PartOfSpeech {
     Preposition,
     Conjunction,
     Interjection,
+    Other(String),
 }
 
 /// Representation of the `PHONE` rule
@@ -394,7 +395,8 @@ impl TryFrom<&str> for PartOfSpeech {
             "preposition" => Self::Preposition,
             "conjunction" => Self::Conjunction,
             "interjection" => Self::Interjection,
-            _ => return Err(ParseErrorKind::PartOfSpeech(value.to_owned())),
+            x => Self::Other(x.to_owned()),
+            //_ => return Err(ParseErrorKind::PartOfSpeech(value.to_owned())),
         };
         Ok(ret)
     }

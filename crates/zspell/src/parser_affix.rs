@@ -244,7 +244,7 @@ where
                     ));
                 }
                 let strip = line_groups.name("strip_chars").unwrap().as_str();
-                let affix = line_groups.name("affix").unwrap().as_str();
+                let mut affix = line_groups.name("affix").unwrap().as_str();
                 let cond = line_groups.name("condition").unwrap().as_str();
                 let morph_info = if let Some(m) = line_groups.name("morph") {
                     parse_morph_info(m.as_str(), nlines)?
@@ -252,8 +252,17 @@ where
                     Vec::new()
                 };
 
-                let push = ParsedRule::new_parse(kind, affix, strip, cond, morph_info)
-                    .map_err(|e| ParseError::new_nocol(e, cond, nlines))?;
+                let mut continuations = String::new();
+
+                if let Some(i) = affix.find('/') {
+                    let (aff, cont) = affix.split_at(i);
+                    affix = aff;
+                    continuations.push_str(&cont[1..]);
+                }
+
+                let push =
+                    ParsedRule::new_parse(kind, affix, &continuations, strip, cond, morph_info)
+                        .map_err(|e| ParseError::new_nocol(e, cond, nlines))?;
 
                 rules.push(push);
             }
@@ -405,7 +414,7 @@ fn parse_try_characters(s: &str) -> ParseResult {
     string_parser(s, "TRY", AffixNode::TryCharacters)
 }
 fn parse_nosuggest_flag(s: &str) -> ParseResult {
-    flag_parser(s, "NOSUGGEST", AffixNode::NoSuggestFlag)
+    string_parser(s, "NOSUGGEST", AffixNode::NoSuggestFlag)
 }
 fn parse_compound_suggestions_max(s: &str) -> ParseResult {
     int_parser(s, "MAXCPDSUGS", AffixNode::CompoundSugMax)
@@ -583,16 +592,16 @@ fn parse_suffix(s: &str) -> ParseResult {
 */
 
 fn parse_circumfix_flag(s: &str) -> ParseResult {
-    flag_parser(s, "CIRCUMFIX", AffixNode::AfxCircumfixFlag)
+    string_parser(s, "CIRCUMFIX", AffixNode::AfxCircumfixFlag)
 }
 fn parse_forbidden_word_flag(s: &str) -> ParseResult {
-    flag_parser(s, "FORBIDDENWORD", AffixNode::ForbiddenWordFlag)
+    string_parser(s, "FORBIDDENWORD", AffixNode::ForbiddenWordFlag)
 }
 fn parse_afx_full_strip(s: &str) -> ParseResult {
     bool_parser(s, "FULLSTRIP", AffixNode::AfxFullStrip)
 }
 fn parse_afx_keep_case_flag(s: &str) -> ParseResult {
-    flag_parser(s, "KEEPCASE", AffixNode::AfxKeepCaseFlag)
+    string_parser(s, "KEEPCASE", AffixNode::AfxKeepCaseFlag)
 }
 fn parse_afx_input_conversion(s: &str) -> ParseResult {
     table_parser(s, "ICONV", |v| {
@@ -622,7 +631,7 @@ fn parse_afx_lemma_present_flag(s: &str) -> ParseResult {
     flag_parser(s, "LEMMA_PRESENT", AffixNode::AfxLemmaPresentFlag)
 }
 fn parse_afx_needed_flag(s: &str) -> ParseResult {
-    flag_parser(s, "NEEDAFFIX", AffixNode::AfxNeededFlag)
+    string_parser(s, "NEEDAFFIX", AffixNode::AfxNeededFlag)
 }
 fn parse_afx_pseudoroot_flag(s: &str) -> ParseResult {
     flag_parser(s, "PSEUDOROOT", AffixNode::AfxPseudoRootFlag)
@@ -721,6 +730,7 @@ pub fn parse_affix(s: &str) -> Result<Vec<AffixNode>, ParseError> {
     'outer: while !working.is_empty() {
         'inner: for (ix, parse_fn) in ALL_PARSERS.iter().enumerate() {
             let tmp = parse_fn(working).map_err(|e| e.add_offset_ret(nlines, 0))?;
+
             if let Some((node, residual, nl)) = tmp {
                 nlines += nl;
                 ret.push(node);

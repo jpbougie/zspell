@@ -30,6 +30,8 @@ pub struct ParsedRuleGroup {
 pub struct ParsedRule {
     /// Affix to be added
     pub(crate) affix: String,
+    /// Continuation classes of this rule
+    pub(crate) continuations: String,
     /// Characters to remove from the beginning or end
     pub(crate) strip: Option<String>,
     /// Regex-based rule for when this rule is true. `None` indicates `.`, i.e.,
@@ -43,6 +45,7 @@ impl ParsedRule {
     pub(crate) fn new(
         kind: RuleType,
         affix: &str,
+        continuations: &str,
         strip: Option<&str>,
         condition: Option<&str>,
         morph_info: Vec<MorphInfo>,
@@ -57,6 +60,7 @@ impl ParsedRule {
             affix: affix.to_owned(),
             condition: cond_re,
             morph_info,
+            continuations: continuations.to_owned(),
         })
     }
 
@@ -64,6 +68,7 @@ impl ParsedRule {
     pub(crate) fn new_raw_re(
         kind: RuleType,
         affix: &str,
+        continuations: &str,
         strip: Option<&str>,
         condition: Option<&str>,
         morph_info: Vec<MorphInfo>,
@@ -78,6 +83,7 @@ impl ParsedRule {
             affix: affix.to_owned(),
             condition: cond_re,
             morph_info,
+            continuations: continuations.to_owned(),
         })
     }
 
@@ -85,6 +91,7 @@ impl ParsedRule {
     pub(crate) fn new_parse(
         kind: RuleType,
         affix: &str,
+        continuations: &str,
         strip: &str,
         condition: &str,
         morph_info: Vec<MorphInfo>,
@@ -99,6 +106,7 @@ impl ParsedRule {
         Ok(Self {
             strip: strip_chars,
             affix: affix.to_owned(),
+            continuations: continuations.to_owned(),
             condition: cond_re,
             morph_info,
         })
